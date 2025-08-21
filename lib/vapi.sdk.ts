@@ -15,10 +15,18 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log("Starting VAPI call:", workflowId, variables);
+
     const call = await vapi.start(workflowId, { variableValues: variables });
-    res.status(200).json({ success: true, call });
+
+    // تأكد أن call ليس undefined
+    res.status(200).json({ success: true, call: call ?? {} });
   } catch (error) {
     console.error("VAPI Call Error:", error);
-    res.status(500).json({ success: false, error });
+
+    res.status(500).json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : JSON.stringify(error) 
+    });
   }
 }
