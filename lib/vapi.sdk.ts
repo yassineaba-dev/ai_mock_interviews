@@ -1,7 +1,6 @@
-// /pages/api/vapi/call.ts
 import Vapi from "@vapi-ai/web";
 
-const vapi = new Vapi(process.env.VAPI_WEB_TOKEN!); // server-only
+const vapi = new Vapi(process.env.VAPI_WEB_TOKEN!);
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -19,14 +18,14 @@ export default async function handler(req, res) {
 
     const call = await vapi.start(workflowId, { variableValues: variables });
 
-    // تأكد أن call ليس undefined
     res.status(200).json({ success: true, call: call ?? {} });
   } catch (error) {
     console.error("VAPI Call Error:", error);
 
-    res.status(500).json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : JSON.stringify(error) 
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : JSON.stringify(error),
+      call: {}, 
     });
   }
 }
