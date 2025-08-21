@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
@@ -59,13 +59,12 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
         console.log("Call started", data.call);
         setCallStatus(CallStatus.ACTIVE);
 
-        // مثال: نضيف رسالة تلقائية من assistant
+        // عرض الأسئلة تلقائيًا في حالة feedback
         if (type === "feedback" && questions) {
           const assistantMessages = questions.map((q) => ({ role: "assistant", content: q }));
           setMessages(assistantMessages);
           setLastMessage(assistantMessages[assistantMessages.length - 1].content);
         }
-
       } else {
         console.error("Call error", data.error);
         setCallStatus(CallStatus.FINISHED);
@@ -81,27 +80,36 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
   };
 
   // Handle feedback after call finished
-  const handleGenerateFeedback = async () => {
-    if (!interviewId || !userId) return;
+  useEffect(() => {
+    const handleGenerateFeedback = async () => {
+      if (!interviewId || !userId) return;
 
-    const { success, feedbackId: id } = await createFeedback({
-      interviewId,
-      userId,
-      transcript: messages,
-      feedbackId,
-    });
+      const { success, feedbackId: id } = await createFeedback({
+        interviewId,
+        userId,
+        transcript: messages,
+        feedbackId,
+      });
 
-    if (success && id) {
-      router.push(`/interview/${interviewId}/feedback`);
-    } else {
-      console.log("Error saving feedback");
-      router.push("/");
+      if (success && id) {
+        router.push(`/interview/${interviewId}/feedback`);
+      } else {
+        console.log("Error saving feedback");
+        router.push("/");
+      }
+    };
+
+    if (callStatus === CallStatus.FINISHED && type !== "generate") {
+      handleGenerateFeedback();
     }
-  };
+  }, [callStatus, messages, interviewId, feedbackId, router, type, userId]);
 
-  if (callStatus === CallStatus.FINISHED && type !== "generate") {
-    handleGenerateFeedback();
-  }
+  // تحديث آخر رسالة
+  useEffect(() => {
+    if (messages.length > 0) {
+      setLastMessage(messages[messages.length - 1].content);
+    }
+  }, [messages]);
 
   return (
     <>
