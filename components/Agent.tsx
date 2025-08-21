@@ -36,44 +36,40 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
   const [lastMessage, setLastMessage] = useState<string>("");
 
   const handleCall = async () => {
-    setCallStatus(CallStatus.CONNECTING);
+  setCallStatus(CallStatus.CONNECTING);
 
-    const workflowId = type === "generate"
-      ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!
-      : interviewer;
+  const workflowId = type === "generate"
+    ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!
+    : interviewer;
 
-    const variables = type === "generate"
-      ? { username: userName, userid: userId }
-      : { questions: questions?.map(q => `- ${q}`).join("\n") };
+  const variables = type === "generate"
+    ? { username: userName, userid: userId }
+    : { questions: questions?.map(q => `- ${q}`).join("\n`) };
 
-    try {
-      const res = await fetch("/api/vapi/call", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workflowId, variables }),
-      });
+  try {
+    const res = await fetch("/api/vapi/call", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workflowId, variables }),
+    });
 
-      const data = await res.json();
+    // حماية قبل JSON
+    const text = await res.text(); // اقرأ النص أولًا
+    const data = text ? JSON.parse(text) : { success: false, error: "Empty response" };
 
-      if (data.success) {
-        console.log("Call started", data.call);
-        setCallStatus(CallStatus.ACTIVE);
-
-        // عرض الأسئلة تلقائيًا في حالة feedback
-        if (type === "feedback" && questions) {
-          const assistantMessages = questions.map((q) => ({ role: "assistant", content: q }));
-          setMessages(assistantMessages);
-          setLastMessage(assistantMessages[assistantMessages.length - 1].content);
-        }
-      } else {
-        console.error("Call error", data.error);
-        setCallStatus(CallStatus.FINISHED);
-      }
-    } catch (err) {
-      console.error("Fetch error", err);
+    if (data.success) {
+      console.log("Call started", data.call);
+      setCallStatus(CallStatus.ACTIVE);
+    } else {
+      console.error("Call error", data.error);
       setCallStatus(CallStatus.FINISHED);
     }
-  };
+  } catch (err) {
+    console.error("Fetch error", err);
+    setCallStatus(CallStatus.FINISHED);
+  }
+};
+
 
   const handleDisconnect = () => {
     setCallStatus(CallStatus.FINISHED);
