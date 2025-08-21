@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
 import { cn } from "@/lib/utils";
 import { interviewer } from "@/constants";
 import { createFeedback } from "@/lib/actions/general.action";
@@ -35,7 +34,6 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [lastMessage, setLastMessage] = useState<string>("");
 
-  // Start call
   const handleCall = async () => {
     setCallStatus(CallStatus.CONNECTING);
 
@@ -55,14 +53,14 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
       });
 
       const text = await res.text();
-      const data = text ? JSON.parse(text) : { success: false, error: "Empty response" };
+      const data = text ? JSON.parse(text) : { success: false, error: "Empty response from server" };
 
-      if (data.success) {
-        console.log("Call started", data.call);
-        setCallStatus(CallStatus.ACTIVE);
-      } else {
+      if (!data.success) {
         console.error("Call error", data.error);
         setCallStatus(CallStatus.FINISHED);
+      } else {
+        console.log("Call started", data.call);
+        setCallStatus(CallStatus.ACTIVE);
       }
     } catch (err) {
       console.error("Fetch error", err);
@@ -70,17 +68,9 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
     }
   };
 
-  // End call
   const handleDisconnect = () => {
     setCallStatus(CallStatus.FINISHED);
   };
-
-  // Update last message
-  useEffect(() => {
-    if (messages.length > 0) {
-      setLastMessage(messages[messages.length - 1].content);
-    }
-  }, [messages]);
 
   // Handle feedback after call finished
   useEffect(() => {
@@ -107,10 +97,16 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
     }
   }, [callStatus, messages, interviewId, feedbackId, router, type, userId]);
 
+  // تحديث آخر رسالة
+  useEffect(() => {
+    if (messages.length > 0) {
+      setLastMessage(messages[messages.length - 1].content);
+    }
+  }, [messages]);
+
   return (
     <>
       <div className="call-view">
-        {/* AI Interviewer Card */}
         <div className="card-interviewer">
           <div className="avatar">
             <Image src="/ai-avatar.png" alt="profile-image" width={65} height={54} className="object-cover" />
@@ -118,7 +114,6 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
           <h3>AI Interviewer</h3>
         </div>
 
-        {/* User Profile Card */}
         <div className="card-border">
           <div className="card-content">
             <Image src="/user-avatar.png" alt="profile-image" width={120} height={120} className="rounded-full object-cover" />
