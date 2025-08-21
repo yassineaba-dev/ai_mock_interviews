@@ -35,45 +35,52 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [lastMessage, setLastMessage] = useState<string>("");
 
+  // Start call
   const handleCall = async () => {
-  setCallStatus(CallStatus.CONNECTING);
+    setCallStatus(CallStatus.CONNECTING);
 
-  const workflowId = type === "generate"
-    ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!
-    : interviewer;
+    const workflowId = type === "generate"
+      ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!
+      : interviewer;
 
-  const variables = type === "generate"
-    ? { username: userName, userid: userId }
-    : { questions: questions?.map(q => `- ${q}`).join("\n`) };
+    const variables = type === "generate"
+      ? { username: userName, userid: userId }
+      : { questions: questions?.map(q => `- ${q}`).join("\n") };
 
-  try {
-    const res = await fetch("/api/vapi/call", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workflowId, variables }),
-    });
+    try {
+      const res = await fetch("/api/vapi/call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workflowId, variables }),
+      });
 
-    // حماية قبل JSON
-    const text = await res.text(); // اقرأ النص أولًا
-    const data = text ? JSON.parse(text) : { success: false, error: "Empty response" };
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : { success: false, error: "Empty response" };
 
-    if (data.success) {
-      console.log("Call started", data.call);
-      setCallStatus(CallStatus.ACTIVE);
-    } else {
-      console.error("Call error", data.error);
+      if (data.success) {
+        console.log("Call started", data.call);
+        setCallStatus(CallStatus.ACTIVE);
+      } else {
+        console.error("Call error", data.error);
+        setCallStatus(CallStatus.FINISHED);
+      }
+    } catch (err) {
+      console.error("Fetch error", err);
       setCallStatus(CallStatus.FINISHED);
     }
-  } catch (err) {
-    console.error("Fetch error", err);
-    setCallStatus(CallStatus.FINISHED);
-  }
-};
+  };
 
-
+  // End call
   const handleDisconnect = () => {
     setCallStatus(CallStatus.FINISHED);
   };
+
+  // Update last message
+  useEffect(() => {
+    if (messages.length > 0) {
+      setLastMessage(messages[messages.length - 1].content);
+    }
+  }, [messages]);
 
   // Handle feedback after call finished
   useEffect(() => {
@@ -99,13 +106,6 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
       handleGenerateFeedback();
     }
   }, [callStatus, messages, interviewId, feedbackId, router, type, userId]);
-
-  // تحديث آخر رسالة
-  useEffect(() => {
-    if (messages.length > 0) {
-      setLastMessage(messages[messages.length - 1].content);
-    }
-  }, [messages]);
 
   return (
     <>
