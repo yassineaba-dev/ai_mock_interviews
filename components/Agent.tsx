@@ -1,3 +1,4 @@
+// components/Agent.tsx
 "use client";
 
 import Image from "next/image";
@@ -38,13 +39,19 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
     setCallStatus(CallStatus.CONNECTING);
 
     const workflowId = type === "generate"
-      ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!
-      : process.env.NEXT_PUBLIC_VAPI_INTERVIEWER_WORKFLOW_ID!; // Use a different env var for interviewer
+      ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID
+      : process.env.NEXT_PUBLIC_VAPI_INTERVIEWER_WORKFLOW_ID;
+
+    if (!workflowId) {
+      console.error("Workflow ID missing for this call type.");
+      setCallStatus(CallStatus.FINISHED);
+      return;
+    }
 
     // Format variables correctly for VAPI
     const variables = type === "generate"
       ? { username: userName, userid: userId }
-      : { questions: questions?.join("; ") }; // Use simpler format
+      : { questions: (questions ?? []).join("; ") };
 
     try {
       const res = await fetch("/api/vapi/call", {
@@ -61,6 +68,28 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
       } else {
         console.log("Call started", data.call);
         setCallStatus(CallStatus.ACTIVE);
+
+        // If the call response contains initial messages, append them
+        // Example shape handling — adapt to the exact API response shape
+        const callResult = data.call;
+        // try multiple common fields safely:
+        const transcript =
+          callResult?.transcript ??
+          callResult?.output ??
+          callResult?.result ??
+          null;
+
+        if (transcript) {
+          // normalize into messages array if it's a string or array
+          if (typeof transcript === "string") {
+            setMessages((m) => [...m, { role: "assistant", content: transcript }]);
+          } else if (Array.isArray(transcript)) {
+            const normalized = transcript.map((t: any) =>
+              typeof t === "string" ? { role: "assistant", content: t } : t
+            );
+            setMessages((m) => [...m, ...normalized]);
+          }
+        }
       }
     } catch (err) {
       console.error("Fetch error", err);
@@ -72,7 +101,7 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
     setCallStatus(CallStatus.FINISHED);
   };
 
-  // ✅ Generate feedback after finishing
+  // ✅ Generate feedback after finishing (for interviewer flows)
   useEffect(() => {
     const handleGenerateFeedback = async () => {
       if (!interviewId || !userId) return;
@@ -95,6 +124,7 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
     if (callStatus === CallStatus.FINISHED && type !== "generate") {
       handleGenerateFeedback();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [callStatus, messages, interviewId, feedbackId, router, type, userId]);
 
   // ✅ Always show latest message
