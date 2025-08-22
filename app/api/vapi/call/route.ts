@@ -22,7 +22,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "VAPI_SERVER_TOKEN is missing" }, { status: 500 });
     }
 
-    // Build the payload exactly how we'll send it to api.vapi.ai
     const payloadForVapi = {
       workflowId,
       input: { variableValues: variables },
@@ -39,21 +38,16 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(payloadForVapi),
     });
 
-    const resText = await apiRes.text();
-    let parsed;
-    try {
-      parsed = JSON.parse(resText);
-    } catch {
-      parsed = resText;
-    }
+    const text = await apiRes.text();
+    let parsed: any;
+    try { parsed = JSON.parse(text); } catch { parsed = text; }
 
-    console.log("Vapi response status:", apiRes.status);
-    console.log("Vapi response body:", parsed);
+    console.log("Vapi response status:", apiRes.status, "body:", parsed);
 
     if (!apiRes.ok) {
-      // return the full upstream error so the client can show it
+      // Always return a consistent shape — include upstream body for debugging
       return NextResponse.json(
-        { success: false, upstream: { status: apiRes.status, body: parsed } },
+        { success: false, error: `Upstream returned ${apiRes.status}`, upstream: { status: apiRes.status, body: parsed } },
         { status: 400 }
       );
     }
