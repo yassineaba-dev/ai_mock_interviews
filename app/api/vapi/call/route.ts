@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { vapi } from "@/lib/vapi.sdk";
+import { Vapi } from "@vapi-ai/node";
+
+// Initialize server-side VAPI client
+const vapiServer = new Vapi(process.env.VAPI_SERVER_TOKEN!);
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,8 +15,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const call = await vapi.start(workflowId, {
-      variableValues: variables || {},
+    // Use the correct API method for server-side calls
+    const call = await vapiServer.call.start({
+      type: "workflow",
+      workflow: {
+        id: workflowId,
+        variableValues: variables || {},
+      },
     });
 
     return NextResponse.json({ success: true, call }, { status: 200 });
