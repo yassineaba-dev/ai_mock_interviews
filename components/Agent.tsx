@@ -49,7 +49,7 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
     const res = await fetch("/api/vapi/call", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workflow, variables }), // ✅ FIXED key
+      body: JSON.stringify({ workflowId, variables }), // ✅ FIXED key
     });
 
     const text = await res.text();
