@@ -40,6 +40,9 @@
     "eslint": "^9",
     "eslint-config-next": "15.2.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "@vapi-ai/web": "^2.3.8",
+    "@vapi-ai/server-sdk": "^0.10.0",
+    "@vapi-ai/api": "^0.1.0"
   }
 }
