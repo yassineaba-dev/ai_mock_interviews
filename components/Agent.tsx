@@ -37,9 +37,9 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
   const handleCall = async () => {
   setCallStatus(CallStatus.CONNECTING);
 
-  const workflow = type === "generate"
-    ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!
-    : interviewer;
+  const workflowId = type === "generate"
+  ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!
+  : interviewer;
 
   const variables = type === "generate"
     ? { username: userName, userid: userId }
