@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Vapi } from "@vapi-ai/node";
+import { Vapi } from "@vapi-ai/server-sdk";
 
 // Initialize server-side VAPI client
 const vapiServer = new Vapi(process.env.VAPI_SERVER_TOKEN!);
