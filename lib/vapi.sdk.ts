@@ -1,8 +1,11 @@
-// Server-only VAPI SDK instance
+// lib/vapi.sdk.ts
 import Vapi from "@vapi-ai/web";
 
-if (process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN!) {
-  throw new Error("VAPI_WEB_TOKEN is missing in environment variables");
+const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
+
+if (!token) {
+  throw new Error("❌ NEXT_PUBLIC_VAPI_WEB_TOKEN is missing in environment variables");
 }
 
-export const vapi = new Vapi(process.env.VAPI_WEB_TOKEN);
+// نصدّر instance واحد تستعمله في أي مكان
+export const vapi = new Vapi(token);
