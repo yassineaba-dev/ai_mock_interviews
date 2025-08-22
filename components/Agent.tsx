@@ -35,67 +35,60 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [lastMessage, setLastMessage] = useState<string>("");
 
-  const handleCall = async () => {
-    setCallStatus(CallStatus.CONNECTING);
+  // inside Agent component
+const handleCall = async () => {
+  setCallStatus(CallStatus.CONNECTING);
 
-    const workflowId = type === "generate"
-      ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID
-      : process.env.NEXT_PUBLIC_VAPI_INTERVIEWER_WORKFLOW_ID;
+  const workflowId = type === "generate"
+    ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID
+    : process.env.NEXT_PUBLIC_VAPI_INTERVIEWER_WORKFLOW_ID;
 
-    if (!workflowId) {
-      console.error("Workflow ID missing for this call type.");
+  if (!workflowId) {
+    console.error("Workflow ID missing for this call type.");
+    setCallStatus(CallStatus.FINISHED);
+    return;
+  }
+
+  const variables = type === "generate"
+    ? { username: userName, userid: userId }
+    : { questions: (questions ?? []) }; // send array if workflow expects array
+
+  try {
+    const res = await fetch("/api/vapi/call", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workflowId, variables }),
+    });
+
+    // ALWAYS inspect full response
+    const data = await res.json();
+    console.log("RAW /api/vapi/call response:", data);
+
+    if (!data.success) {
+      // show upstream details if available
+      console.error("Call error", data.error ?? data.upstream?.body ?? data);
+      // If Vapi gives structured messages, try to show them:
+      const upstream = data.upstream?.body;
+      if (upstream) {
+        // common shape: { message: [ ... ] } or { errors: [...] }
+        console.error("Upstream details:", upstream);
+        if (Array.isArray(upstream.message)) {
+          console.error("Vapi messages:", upstream.message.join("\n"));
+        }
+      }
       setCallStatus(CallStatus.FINISHED);
       return;
     }
 
-    // Format variables correctly for VAPI
-    const variables = type === "generate"
-      ? { username: userName, userid: userId }
-      : { questions: (questions ?? []).join("; ") };
+    console.log("Call started", data.call);
+    setCallStatus(CallStatus.ACTIVE);
+    // handle data.call as before...
+  } catch (err) {
+    console.error("Fetch error", err);
+    setCallStatus(CallStatus.FINISHED);
+  }
+};
 
-    try {
-      const res = await fetch("/api/vapi/call", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workflowId, variables }),
-      });
-
-      const data = await res.json();
-
-      if (!data.success) {
-        console.error("Call error", data.error);
-        setCallStatus(CallStatus.FINISHED);
-      } else {
-        console.log("Call started", data.call);
-        setCallStatus(CallStatus.ACTIVE);
-
-        // If the call response contains initial messages, append them
-        // Example shape handling — adapt to the exact API response shape
-        const callResult = data.call;
-        // try multiple common fields safely:
-        const transcript =
-          callResult?.transcript ??
-          callResult?.output ??
-          callResult?.result ??
-          null;
-
-        if (transcript) {
-          // normalize into messages array if it's a string or array
-          if (typeof transcript === "string") {
-            setMessages((m) => [...m, { role: "assistant", content: transcript }]);
-          } else if (Array.isArray(transcript)) {
-            const normalized = transcript.map((t: any) =>
-              typeof t === "string" ? { role: "assistant", content: t } : t
-            );
-            setMessages((m) => [...m, ...normalized]);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Fetch error", err);
-      setCallStatus(CallStatus.FINISHED);
-    }
-  };
 
   const handleDisconnect = () => {
     setCallStatus(CallStatus.FINISHED);
