@@ -47,10 +47,10 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
 
   try {
     const res = await fetch("/api/vapi/call", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workflowId, variables }), // ✅ FIXED key
-    });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ workflowId, variables }),
+});
 
     const text = await res.text();
     const data = text ? JSON.parse(text) : { success: false, error: "Empty response from server" };
