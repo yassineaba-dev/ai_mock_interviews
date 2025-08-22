@@ -1,4 +1,3 @@
-// app/api/vapi/call/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { vapi } from "@/lib/vapi.sdk";
 
@@ -19,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, call }, { status: 200 });
   } catch (error: any) {
-    console.error("🔥 VAPI call error:", error);
+    console.error("VAPI call error:", error);
     return NextResponse.json(
       { success: false, error: error.message || "Unknown error" },
       { status: 500 }
