@@ -35,46 +35,38 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
   const [lastMessage, setLastMessage] = useState<string>("");
 
   const handleCall = async () => {
-    setCallStatus(CallStatus.CONNECTING);
+  setCallStatus(CallStatus.CONNECTING);
 
-    // ✅ Fix: workflowId fallback logic
-    const workflowId =
-      type === "generate"
-        ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID || ""
-        : interviewer;
+  const workflow = type === "generate"
+    ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID!
+    : interviewer;
 
-    if (!workflowId) {
-      console.error("❌ workflowId is missing!");
+  const variables = type === "generate"
+    ? { username: userName, userid: userId }
+    : { questions: questions?.map(q => `- ${q}`).join("\n") };
+
+  try {
+    const res = await fetch("/api/vapi/call", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workflow, variables }), // ✅ FIXED key
+    });
+
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : { success: false, error: "Empty response from server" };
+
+    if (!data.success) {
+      console.error("Call error", data.error);
       setCallStatus(CallStatus.FINISHED);
-      return;
+    } else {
+      console.log("Call started", data.call);
+      setCallStatus(CallStatus.ACTIVE);
     }
-
-    const variables =
-      type === "generate"
-        ? { username: userName, userid: userId }
-        : { questions: questions?.map((q) => `- ${q}`).join("\n") };
-
-    try {
-      const res = await fetch("/api/vapi/call", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workflowId, variables }),
-      });
-
-      const data = await res.json();
-
-      if (!data.success) {
-        console.error("Call error", data.error);
-        setCallStatus(CallStatus.FINISHED);
-      } else {
-        console.log("✅ Call started", data.call);
-        setCallStatus(CallStatus.ACTIVE);
-      }
-    } catch (err) {
-      console.error("❌ Fetch error", err);
-      setCallStatus(CallStatus.FINISHED);
-    }
-  };
+  } catch (err) {
+    console.error("Fetch error", err);
+    setCallStatus(CallStatus.FINISHED);
+  }
+};
 
   const handleDisconnect = () => {
     setCallStatus(CallStatus.FINISHED);
