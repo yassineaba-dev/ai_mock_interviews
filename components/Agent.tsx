@@ -21,7 +21,8 @@ interface SavedMessage {
   content: string;
 }
 
-const AGENT_ASSISTANT_ID = "0fd5ba66-8f57-4d71-ba5f-b39200f9a9b7"; // Assistant linked to workflow
+// استخدم Assistant ID المرتبط بالـ workflow
+const WORKFLOW_ASSISTANT_ID = process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID_ASSISTANT!;
 
 const Agent = ({
   userName,
@@ -93,22 +94,31 @@ const Agent = ({
   const handleCall = async () => {
     setCallStatus(CallStatus.CONNECTING);
 
-    // Use Assistant ID linked to workflow
-    if (type === "generate") {
-      await vapi.start(AGENT_ASSISTANT_ID, {
-        variableValues: {
-          username: userName,
-          userid: userId,
-        },
-      });
-    } else {
-      let formattedQuestions = questions?.map((q) => `- ${q}`).join("\n") || "";
+    // تحقق من وجود ميكروفون
+    const hasMic = await navigator.mediaDevices.enumerateDevices()
+      .then(devices => devices.some(device => device.kind === "audioinput"));
 
-      await vapi.start(interviewer, {
-        variableValues: {
-          questions: formattedQuestions,
-        },
-      });
+    try {
+      if (type === "generate") {
+        await vapi.start(WORKFLOW_ASSISTANT_ID, {
+          variableValues: {
+            username: userName,
+            userid: userId,
+          },
+          disableAudio: !hasMic, // إذا لا يوجد ميكروفون، شغّل نص فقط
+        });
+      } else {
+        let formattedQuestions = questions?.map((q) => `- ${q}`).join("\n") || "";
+        await vapi.start(interviewer, {
+          variableValues: {
+            questions: formattedQuestions,
+          },
+          disableAudio: !hasMic,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to start call:", err);
+      setCallStatus(CallStatus.INACTIVE);
     }
   };
 
