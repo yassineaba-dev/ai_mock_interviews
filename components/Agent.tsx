@@ -1,12 +1,11 @@
-// components/Agent.tsx
 "use client";
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { interviewer } from "@/constants";
 import { createFeedback } from "@/lib/actions/general.action";
+import { getVapiClient } from "@/lib/getVapiClient";
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
@@ -35,66 +34,58 @@ const Agent = ({ userName, userId, interviewId, feedbackId, type, questions }: A
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [lastMessage, setLastMessage] = useState<string>("");
 
-  // inside Agent component
-const handleCall = async () => {
-  setCallStatus(CallStatus.CONNECTING);
+  const handleCall = async () => {
+    setCallStatus(CallStatus.CONNECTING);
 
-  const workflowId = type === "generate"
-    ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID
-    : process.env.NEXT_PUBLIC_VAPI_INTERVIEWER_WORKFLOW_ID;
+    const workflowId =
+      type === "generate"
+        ? process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID
+        : process.env.NEXT_PUBLIC_VAPI_INTERVIEWER_WORKFLOW_ID;
 
-  if (!workflowId) {
-    console.error("Workflow ID missing for this call type.");
-    setCallStatus(CallStatus.FINISHED);
-    return;
-  }
-
-  const variables = type === "generate"
-    ? { username: userName, userid: userId }
-    : { questions: (questions ?? []) }; // send array if workflow expects array
-
-  try {
-    const res = await fetch("/api/vapi/call", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workflowId, variables }),
-    });
-
-    // ALWAYS inspect full response
-    const data = await res.json();
-    console.log("RAW /api/vapi/call response:", data);
-
-    if (!data.success) {
-      // show upstream details if available
-      console.error("Call error", data.error ?? data.upstream?.body ?? data);
-      // If Vapi gives structured messages, try to show them:
-      const upstream = data.upstream?.body;
-      if (upstream) {
-        // common shape: { message: [ ... ] } or { errors: [...] }
-        console.error("Upstream details:", upstream);
-        if (Array.isArray(upstream.message)) {
-          console.error("Vapi messages:", upstream.message.join("\n"));
-        }
-      }
+    if (!workflowId) {
+      console.error("Workflow ID missing for this call type.");
       setCallStatus(CallStatus.FINISHED);
       return;
     }
 
-    console.log("Call started", data.call);
-    setCallStatus(CallStatus.ACTIVE);
-    // handle data.call as before...
-  } catch (err) {
-    console.error("Fetch error", err);
-    setCallStatus(CallStatus.FINISHED);
-  }
-};
+    const variables =
+      type === "generate"
+        ? { username: userName, userid: userId }
+        : { questions: questions ?? [] };
 
+    try {
+      const client = await getVapiClient();
+      if (!client) {
+        console.error("VAPI Web Client not initialized");
+        setCallStatus(CallStatus.FINISHED);
+        return;
+      }
+
+      const call = await client.start({
+        workflowId,
+        variableValues: variables,
+      });
+
+      // Listen for AI messages
+      call.on("message", (msg: any) => {
+        setMessages((prev) => [...prev, { role: msg.role, content: msg.content }]);
+      });
+
+      // Call finished
+      call.on("finish", () => setCallStatus(CallStatus.FINISHED));
+
+      setCallStatus(CallStatus.ACTIVE);
+    } catch (err) {
+      console.error("Error starting VAPI call:", err);
+      setCallStatus(CallStatus.FINISHED);
+    }
+  };
 
   const handleDisconnect = () => {
     setCallStatus(CallStatus.FINISHED);
   };
 
-  // ✅ Generate feedback after finishing (for interviewer flows)
+  // Generate feedback after finishing (for interviewer flows)
   useEffect(() => {
     const handleGenerateFeedback = async () => {
       if (!interviewId || !userId) return;
@@ -117,10 +108,9 @@ const handleCall = async () => {
     if (callStatus === CallStatus.FINISHED && type !== "generate") {
       handleGenerateFeedback();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [callStatus, messages, interviewId, feedbackId, router, type, userId]);
 
-  // ✅ Always show latest message
+  // Always show latest message
   useEffect(() => {
     if (messages.length > 0) {
       setLastMessage(messages[messages.length - 1].content);
