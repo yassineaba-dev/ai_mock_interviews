@@ -104,8 +104,7 @@ const Agent = ({
           variableValues: {
             username: userName,
             userid: userId,
-          },
-          disableAudio: !hasMic, // إذا لا يوجد ميكروفون، شغّل نص فقط
+          }
         });
       } else {
         let formattedQuestions = questions?.map((q) => `- ${q}`).join("\n") || "";
