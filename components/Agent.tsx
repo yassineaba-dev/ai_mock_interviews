@@ -21,7 +21,7 @@ interface SavedMessage {
   content: string;
 }
 
-// استخدم Assistant ID المرتبط بالـ workflow
+// Assistant المرتبط بالـ workflow
 const WORKFLOW_ASSISTANT_ID = process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID_ASSISTANT!;
 
 const Agent = ({
@@ -94,17 +94,14 @@ const Agent = ({
   const handleCall = async () => {
     setCallStatus(CallStatus.CONNECTING);
 
-    // تحقق من وجود ميكروفون
-    const hasMic = await navigator.mediaDevices.enumerateDevices()
-      .then(devices => devices.some(device => device.kind === "audioinput"));
-
     try {
       if (type === "generate") {
+        // تشغيل Assistant المرتبط بالـ workflow
         await vapi.start(WORKFLOW_ASSISTANT_ID, {
           variableValues: {
             username: userName,
             userid: userId,
-          }
+          },
         });
       } else {
         let formattedQuestions = questions?.map((q) => `- ${q}`).join("\n") || "";
@@ -112,7 +109,6 @@ const Agent = ({
           variableValues: {
             questions: formattedQuestions,
           },
-          disableAudio: !hasMic,
         });
       }
     } catch (err) {
