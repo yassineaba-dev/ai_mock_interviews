@@ -1,7 +1,7 @@
 <div align="center">
   <br />
     <a href="#" target="_blank">
-      <img src="https://github.com/yassineaba-dev/public/robot.png" alt="Project Banner">
+      <img src="https://github.com/yassineaba-dev/ai_mock_interviews-ys/blob/main/public/robot.png" alt="Project Banner">
     </a>
   <br />
   
