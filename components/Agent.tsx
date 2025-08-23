@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { createFeedback } from "@/lib/actions/general.action";
-import { getVapiClient } from "@/lib/getVapiClient";
+import { getVapiClient } from "@/lib/vapi.sdk";
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
