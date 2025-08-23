@@ -1,9 +1,5 @@
-// lib/getVapiClient.ts
-// A small helper to lazily initialise the @vapi-ai/web client only in the browser.
-
 export async function getVapiClient() {
   if (typeof window === "undefined") return null;
-  // @ts-ignore - cache client on window to avoid multiple inits
   if (window.__VAPI_CLIENT) return window.__VAPI_CLIENT;
 
   try {
@@ -17,8 +13,6 @@ export async function getVapiClient() {
     }
 
     if (typeof VapiCtor === "function") {
-      // some SDKs take token only, some take { apiKey } - prefer token-only for web SDK
-      // try both shapes gracefully:
       let client: any = null;
       try {
         client = new VapiCtor(token);
@@ -26,12 +20,11 @@ export async function getVapiClient() {
         try {
           client = new VapiCtor({ apiKey: token });
         } catch (e) {
-          console.error("Failed to construct VAPI web client with known shapes:", e);
+          console.error("Failed to construct VAPI web client:", e);
           return null;
         }
       }
 
-      // @ts-ignore
       window.__VAPI_CLIENT = client;
       return client;
     } else {
